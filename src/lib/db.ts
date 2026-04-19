@@ -1,18 +1,27 @@
 import Dexie, { Table } from 'dexie';
-import { Note, Link, FileItem, UserPreferences } from '../types';
+import { Note, Link, FileItem, UserPreferences, SyncStatus } from '../types';
 
 export class FlowMindDB extends Dexie {
-  notes!: Table<Note>;
-  links!: Table<Link>;
-  files!: Table<FileItem>;
+  notes!: Table<Note & { 
+    cloudUpdatedAt?: Date | null;
+    deletedAt?: Date | null;
+  }>;
+  links!: Table<Link & { 
+    cloudUpdatedAt?: Date | null;
+    deletedAt?: Date | null;
+  }>;
+  files!: Table<FileItem & { 
+    cloudUpdatedAt?: Date | null;
+    deletedAt?: Date | null;
+  }>;
   preferences!: Table<UserPreferences & { id?: number }>;
 
   constructor() {
     super('FlowMindDB');
     this.version(1).stores({
-      notes: 'id, title, *tags, isFavorite, createdAt, updatedAt, syncStatus',
-      links: 'id, url, title, *tags, isFavorite, createdAt, updatedAt, syncStatus',
-      files: 'id, name, type, *tags, createdAt, syncStatus',
+      notes: 'id, title, *tags, isFavorite, createdAt, updatedAt, syncStatus, cloudUpdatedAt, deletedAt',
+      links: 'id, url, title, *tags, isFavorite, createdAt, updatedAt, syncStatus, cloudUpdatedAt, deletedAt',
+      files: 'id, name, type, *tags, createdAt, syncStatus, cloudUpdatedAt, deletedAt',
       preferences: '++id',
     });
   }

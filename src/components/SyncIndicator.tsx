@@ -1,58 +1,92 @@
-import { useEffect, useState } from 'react';
-import { useStore } from '../store/useStore';
+import { useSync } from '../hooks/useSync';
+import { Clock, AlertTriangle, AlertCircle, Loader2, WifiOff, Wifi } from 'lucide-react';
 
 export function SyncIndicator() {
-  const { syncStatus } = useStore();
-  const [showMessage, setShowMessage] = useState(false);
+  const {
+    isSyncing,
+    lastSyncTime,
+    syncError,
+    pendingCount,
+    isOnline,
+    syncNow,
+    pauseSync,
+    resumeSync
+  } = useSync();
 
-  useEffect(() => {
-    if (syncStatus === 'synced') {
-      setShowMessage(true);
-      const timer = setTimeout(() => setShowMessage(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [syncStatus]);
+  // Format time ago
+  const timeAgo = (date: Date | null): string => {
+    if (!date) return 'Never';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 1440) return `${Math.round(diffMins / 60)}h ago`;
+    return `${Math.round(diffMins / 1440)}d ago`;
+  };
 
-  if (syncStatus === 'idle') return null;
+  // Determine status
+  let status: 'syncing' | 'error' | 'offline' | 'idle' | 'pending' = 'idle';
+  let tooltipContent: string = '';
+  let iconName: keyof typeof import('lucide-react') = 'Wifi';
+
+  if (!isOnline) {
+    status = 'offline';
+    tooltipContent = 'Offline - Changes will sync when back online';
+    iconName = 'WifiOff';
+  } else if (isSyncing) {
+    status = 'syncing';
+    tooltipContent = 'Syncing...';
+    iconName = 'Loader2';
+  } else if (syncError) {
+    status = 'error';
+    tooltipContent = `Sync error: ${syncError.message}`;
+    iconName = 'AlertTriangle';
+  } else if (pendingCount > 0) {
+    status = 'pending';
+    tooltipContent = `${pendingCount} change${pendingCount > 1 ? 's' : ''} pending sync`;
+    iconName = 'AlertCircle';
+  } else {
+    status = 'idle';
+    tooltipContent = `Last synced ${timeAgo(lastSyncTime)}`;
+    iconName = 'Wifi';
+  }
 
   return (
-    <div className="fixed bottom-4 left-4 z-50">
-      <div className={`
-        flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium
-        backdrop-blur-lg transition-all duration-300
-        ${syncStatus === 'syncing' ? 'bg-yellow-500/90 text-white' : ''}
-        ${syncStatus === 'synced' ? 'bg-green-500/90 text-white' : ''}
-        ${syncStatus === 'offline' ? 'bg-gray-500/90 text-white' : ''}
-        ${showMessage ? 'opacity-100 translate-y-0' : 'opacity-70 translate-y-1'}
-      `}>
-        {syncStatus === 'syncing' && (
-          <>
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <span>Sincronizando...</span>
-          </>
+    <div className="relative inline-flex items-center space-x-1">
+      <button
+        title={tooltipContent}
+        onClick={status === 'syncing' ? undefined : syncNow}
+        disabled={status === 'syncing'}
+        className={`w-8 h-8 flex items-center justify-center rounded-full 
+        transition-colors 
+        ${status === 'syncing' 
+          ? 'bg-blue-500 hover:bg-blue-600' 
+          : status === 'error' 
+            ? 'bg-red-500 hover:bg-red-600' 
+            : status === 'offline' 
+              ? 'bg-gray-400 hover:bg-gray-500' 
+              : status === 'pending' 
+                ? 'bg-yellow-500 hover:bg-yellow-600' 
+                : 'bg-green-500 hover:bg-green-600'}`}
+        aria-label={tooltipContent}
+      >
+        {status === 'syncing' ? (
+          <Loader2 className="h-4 w-4 animate-spin text-white" />
+        ) : (
+          // @ts-ignore - lucide-react icon
+          <import('lucide-react')[typeof iconName] className="h-4 w-4 text-white" />
         )}
-
-        {syncStatus === 'synced' && (
-          <>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span>Sincronizado</span>
-          </>
-        )}
-
-        {syncStatus === 'offline' && (
-          <>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
-            </svg>
-            <span>Offline</span>
-          </>
-        )}
-      </div>
+      </button>
+      
+      {/* Pending badge */}
+      {pendingCount > 0 && status !== 'syncing' && (
+        <div className="-top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+          {pendingCount > 99 ? '99+' : pendingCount}
+        </div>
+      )}
     </div>
   );
 }

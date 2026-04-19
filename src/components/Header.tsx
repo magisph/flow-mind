@@ -1,4 +1,5 @@
 import { useStore } from '../store/useStore';
+import { SyncIndicator } from './SyncIndicator';
 
 export function Header() {
   const { theme, setTheme, setSearchOpen, setQuickCaptureOpen } = useStore();
@@ -55,6 +56,8 @@ export function Header() {
               </svg>
             )}
           </button>
+
+          <SyncIndicator />
         </div>
       </div>
     </header>
