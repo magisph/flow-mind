@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react';
 import { useStore } from '../store/useStore';
-import { TabType } from '../types';
+import type { TabType } from '../types';
 
-const tabs: { id: TabType; label: string; icon: JSX.Element }[] = [
+const tabs: { id: TabType; label: string; icon: ReactNode }[] = [
   {
     id: 'notes',
     label: 'Notas',

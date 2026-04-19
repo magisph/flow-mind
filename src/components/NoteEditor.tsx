@@ -8,7 +8,7 @@ export function NoteEditor() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
-  const saveTimeoutRef = useRef<number>();
+  const saveTimeoutRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (note) {
